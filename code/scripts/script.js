@@ -250,8 +250,10 @@ class Chip8
 		console.log(BYTE);
 		*/
 		this.V = [];
-		/* Address Register aka Program Counter, pointing to the current instruction to be executed */
+		/* Address Register*/
 		this.I;
+		/* Program Counter */
+		this.PC;
 		/* The Stack */
 		this.S = [];
 		/* The Delay and Sound Timer */
@@ -263,41 +265,175 @@ class Chip8
 	{
 		while (cycles > 0)
 		{
-			let instruction = this.memory[this.I];
+			console.log("|----------------|\n");
+			// 
+			console.log("PC: 0x" + this.PC.toString(16).padStart(4, "0").toUpperCase() + "  (hex)\n");
+			console.log("PC: " + this.PC + "    (dec)\n");
+			let instruction = this.memory[this.PC];
 			if (instruction == null)
 			{
-				console.log("Instruction not handled: " + instruction + "\n");
+				console.log("Instruction not handled: 0x" + instruction + "\n");
 			}
 			else
 			{
+				// Convert decimal number to hex
+				instruction = instruction.toString(16);
+				// Pad zeroes so that it's 4 digits long
+				instruction = instruction.padStart(4, "0");
 				// .toUppercase() allows the memory addresses to contain either uppercase or lowercase letters
 				instruction = instruction.toUpperCase();
-				console.log(instruction);
-				console.log(this.memory);
+
+				console.log("Instruction: 0x" + instruction + " (hex)\n");
 
 				if (instruction[0] == "0")
 				{
+					// 00E0
 					if (instruction == "00E0") // Clear the screen
 					{
 						this.screen.fill(0);
 						console.log("Cleared the screen.\n");
 					}
+					// 00EE
 					else if (instruction == "00EE") // Return from a subroutine
 					{
 					}
-					// Instruction: 0NNN, where N is a memory address
-					else // Execute machine language subroutine at address instruction[1] to instruction[3]
+					// 0NNN
+					else // Execute subroutine at address NNN
 					{
 					}
 				}
-				if (instruction[0] == "2") // Jump to address instruction[1] to instruction[3]
+				// 1NNN
+				else if (instruction[0] == "1") // Jump to address NNN
 				{
 				}
-				if (instruction == "00E0") // Clear the screen
+				// 2NNN
+				else if (instruction[0] == "2") // Execute subroutine starting at address NNN
 				{
+				}
+				// 3XNN
+				else if (instruction[0] == "3") // Skip the following instruction if the value of register VX equals NN
+				{
+				}
+				// 4XNN
+				else if (instruction[0] == "4") // Skip the following instruction if the value of register VX is not equal to NN
+				{
+				}
+				// 5XY0
+				else if (instruction[0] == "5") // Skip the following instruction if the value of register VX is equal to the value of register VY
+				{
+				}
+				// 6XNN
+				else if (instruction[0] == "6") // Store number NN in register VX
+				{
+				}
+				// 7XNN
+				else if (instruction[0] == "7") // Add the value NN to register VX
+				{
+				}
+				// 8XY0 to 8XYE
+				else if (instruction[0] == "8")
+				{
+					// 8XY0
+					if (instruction[3] == "0") // Store the value of register VY in register VX
+					{
+					}
+					// 8XY1
+					else if (instruction[3] == "1") // Set VX to VX OR VY
+					{
+					}
+					// 8XY2
+					else if (instruction[3] == "2") // Set VX to VX AND VY
+					{
+					}
+					// 8XY3
+					else if (instruction[3] == "3") // Set VX to VX XOR VY
+					{
+					}
+					// 8XY4
+					else if (instruction[3] == "4") // Add the value of register VY to register VX. Set VF to 01 if a carry occurs.
+					{								// Set VF to 00 if a carry does not occur
+					}
+					// 8XY5
+					else if (instruction[3] == "5") // Subtract the value of register VY from register VX. Set VF to 00 if a borrow occurs.
+					{								// Set VF to 01 if a borrow does not occur.
+					}
+					// 8XY6
+					else if (instruction[3] == "6") // Store the value of register VY shifted right one bit in register VX.
+					{								// Set register VF to the least significant bit prior to the shift VY is unchanged
+					}
+					// 8XY7
+					else if (instruction[3] == "7") // Set register VX to the value of VY minus VX. Set VF to 00 if a borrow occurs.
+					{								// Set VF to 01 is a borrow does not occur.
+					}
+					// 8XYE
+					else if (instruction[3] == "E") // Store the value of register VY shifted left one bit in register VX.
+					{								// Set register VF to the most significant bit prior to the shift VY is unchanged.
+					}
+				}
+				// 9XY0
+				else if (instruction[0] == "9") // Skip the following instruction if the value of register VX is not equal to the value of register VY
+				{
+				}
+				// ANNN
+				else if (instruction[0] == "A") // Store memory address NNN in register I
+				{
+				}
+				// BNNN
+				else if (instruction[0] == "B") // Jump to address NNN + V0
+				{
+				}
+				// CXNN
+				else if (instruction[0] == "C") // Set VX to a random number with a mask of NN
+				{
+				}
+				// DXYN
+				else if (instruction[0] == "D") // Draw a sprite at position VX, VY with N bytes of sprite data starting at the address stored in I.
+				{								// Set VF to 01 if any set pixels are changed to unset, and 00 otherwise.
+				}
+				// EX9E or EXA1
+				else if (instruction[0] == "E")
+				{
+					// EX9E
+					if (instruction.slice(2, 4) == "9E") // Skip the following instruction if the key corresponding to the hex value currently stored
+					{									 // in register VX is pressed.
+					}
+					// EXA1
+					else if (instruction.slice(2, 4) == "A1") // Skip the following instruction if the key corresponding to the hex value corrently stored
+					{										  // in register VX is not pressed.
+					}
+				}
+				// FX07 to FX65
+				else if (instruction[0] == "F")
+				{
+					let ie = instruction.slice(2, 4);
+					switch (ie)
+					{
+						case "07": // Store the current value of the delay timer in register VX
+							this.V[parseInt(instruction[1])] = this.DT;
+							console.log("Set register V" + instruction[1] + " to " + this.DT + " (delay timer).\n");
+							break;
+						case "0A": // Wait for a keypress and store the result in register VX
+							break;
+						case "15": // Set the delay timer to the value of register VX
+							break;
+						case "18": // Set the sound timer to the value of register VX
+							break;
+						case "1E": // Add the value stored in register VX to register I
+							break;
+						case "29": // Set I to the memory address of the sprite data corresponding to the hexadecimal digit stored in register VX
+							break;
+						case "33": // Store the binary-coded decimal equivalent of the value stored in register VX at addresses I, I+1 and I+2
+							break;
+						case "55": // Store the values of registers V0 to VX inclusive in memory starting at address I. I is set to I+X+1 after operation
+							break;
+						case "65": // Fill registers V0 to VX inclusive with the values stored in memory starting at address I. I is set to I+X+1 after operation
+							break;
+						default:
+							break;
+					}
 				}
 			}
-			this.I += 1;
+			this.PC += 1;
 			cycles--;
 		}
 	}
@@ -319,8 +455,8 @@ class Chip8
 
 	reset()
 	{
-		this.memory[0x200] = "00e0";
-		this.I = 0x200;
+		this.memory[0x200] = 0x00e0;
+		this.PC = 0x200;
 	}
 }
 
@@ -337,7 +473,14 @@ function getRandomIntInclusive(min, max)
 let chip8 = new Chip8;
 ctx.fillStyle = "#000000";
 ctx.fillRect(0, 0, chip8.SCREEN_WIDTH*chip8.SCREEN_SCALE, chip8.SCREEN_HEIGHT*chip8.SCREEN_SCALE);
+/* Start Testing */
 chip8.screen[216] = 1;
+
+chip8.DT = "0f";
+chip8.memory[0x201] = "F007";
+
+/* End Testing */
+
 chip8.reset();
 chip8.execute(2);
 chip8.draw();
