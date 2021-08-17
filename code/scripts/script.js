@@ -238,17 +238,16 @@ class Chip8
 {
 	constructor()
 	{
+		/* Developer mode which logs info to the console. */
+		this.dev = true;
+		/* Screen resolution in device pixels */
 		this.SCREEN_WIDTH = 64;
 		this.SCREEN_HEIGHT = 32;
 		this.SCREEN_SCALE = 20;
+		/* An array of 0's and 1's for displaying graphics */
 		this.screen = []; // 64x32
 		this.memory = []; // 4096 bytes
 		/* Data Registers 0x0 to 0xe */
-		/*
-		let V = new Uint8Array(16);
-		V[0xe] = 1;
-		console.log(BYTE);
-		*/
 		this.V = [];
 		/* Address Register*/
 		this.I;
@@ -265,14 +264,20 @@ class Chip8
 	{
 		while (cycles > 0)
 		{
-			console.log("|----------------|\n");
-			// 
-			console.log("PC: 0x" + this.PC.toString(16).padStart(4, "0").toUpperCase() + "  (hex)\n");
-			console.log("PC: " + this.PC + "    (dec)\n");
+			/* Display developer information */
+			if (this.dev)
+			{
+				console.log("|----------------|\n");
+				// PC in hex
+				console.log("PC: 0x" + this.PC.toString(16).padStart(4, "0").toUpperCase() + " (hex)\n");
+				// PC in dec
+				console.log("PC: " + this.PC.toString(10).padStart(6, " ") + " (dec)\n");
+			}
+
 			let instruction = this.memory[this.PC];
 			if (instruction == null)
 			{
-				console.log("Instruction not handled: 0x" + instruction + "\n");
+				if (this.dev) {console.log("Instruction not handled: 0x" + instruction + "\n"); };
 			}
 			else
 			{
@@ -283,7 +288,7 @@ class Chip8
 				// .toUppercase() allows the memory addresses to contain either uppercase or lowercase letters
 				instruction = instruction.toUpperCase();
 
-				console.log("Instruction: 0x" + instruction + " (hex)\n");
+				if (this.dev) { console.log("Instruction: 0x" + instruction + " (hex)\n"); };
 
 				if (instruction[0] == "0")
 				{
@@ -291,7 +296,7 @@ class Chip8
 					if (instruction == "00E0") // Clear the screen
 					{
 						this.screen.fill(0);
-						console.log("Cleared the screen.\n");
+						if (this.dev) { console.log("> Cleared the screen.\n"); };
 					}
 					// 00EE
 					else if (instruction == "00EE") // Return from a subroutine
@@ -333,41 +338,36 @@ class Chip8
 				// 8XY0 to 8XYE
 				else if (instruction[0] == "8")
 				{
-					// 8XY0
-					if (instruction[3] == "0") // Store the value of register VY in register VX
+					let i3 = instruction[3];
+					switch (i3)
 					{
-					}
-					// 8XY1
-					else if (instruction[3] == "1") // Set VX to VX OR VY
-					{
-					}
-					// 8XY2
-					else if (instruction[3] == "2") // Set VX to VX AND VY
-					{
-					}
-					// 8XY3
-					else if (instruction[3] == "3") // Set VX to VX XOR VY
-					{
-					}
-					// 8XY4
-					else if (instruction[3] == "4") // Add the value of register VY to register VX. Set VF to 01 if a carry occurs.
-					{								// Set VF to 00 if a carry does not occur
-					}
-					// 8XY5
-					else if (instruction[3] == "5") // Subtract the value of register VY from register VX. Set VF to 00 if a borrow occurs.
-					{								// Set VF to 01 if a borrow does not occur.
-					}
-					// 8XY6
-					else if (instruction[3] == "6") // Store the value of register VY shifted right one bit in register VX.
-					{								// Set register VF to the least significant bit prior to the shift VY is unchanged
-					}
-					// 8XY7
-					else if (instruction[3] == "7") // Set register VX to the value of VY minus VX. Set VF to 00 if a borrow occurs.
-					{								// Set VF to 01 is a borrow does not occur.
-					}
-					// 8XYE
-					else if (instruction[3] == "E") // Store the value of register VY shifted left one bit in register VX.
-					{								// Set register VF to the most significant bit prior to the shift VY is unchanged.
+						// 8XY_
+						case "0": // Store the value of register VY in register VX
+							if (this.dev) { console.log("Store the value of register VY in register VX.\n"); };
+							break;
+						case "1": // Set VX to VX OR VY
+							break;
+						case "2": // Set VX to VX AND VY
+							break;
+						case "3": // Set VX to VX XOR VY
+							break;
+						case "4": // Add the value of register VY to register VX. Set VF to 01 if a carry occurs.
+								  // Set VF to 00 if a carry does not occur
+							break;
+						case "5": // Subtract the value of register VY from register VX. Set VF to 00 if a borrow occurs.
+								  // Set VF to 01 if a borrow does not occur.
+							break;
+						case "6": // Store the value of register VY shifted right one bit in register VX.
+								  // Set register VF to the least significant bit prior to the shift VY is unchanged
+							break;
+						case "7": // Set register VX to the value of VY minus VX. Set VF to 00 if a borrow occurs.
+								  // Set VF to 01 if a borrow does not occur.
+							break;
+						case "E": // Store the value of register VY shifted left one bit in register VX.
+								  // Set register VF to the most significant bit prior to the shift VY is unchanged.
+							break;
+						default:
+							break;
 					}
 				}
 				// 9XY0
@@ -393,24 +393,33 @@ class Chip8
 				// EX9E or EXA1
 				else if (instruction[0] == "E")
 				{
-					// EX9E
-					if (instruction.slice(2, 4) == "9E") // Skip the following instruction if the key corresponding to the hex value currently stored
-					{									 // in register VX is pressed.
-					}
-					// EXA1
-					else if (instruction.slice(2, 4) == "A1") // Skip the following instruction if the key corresponding to the hex value corrently stored
-					{										  // in register VX is not pressed.
+					// ie contains the two rightmost digits of the hex number, as in "end of instruction"
+					let ie = instruction.slice(2, 4);
+					switch (ie)
+					{
+						//  EX__
+						case "9E": // Skip the following instruction if the key corresponding to the hex value currently stored
+								   // in register VX is pressed.
+							if (this.dev) { console.log("Skip the following instruction if the key corresponding to the hex value currently stored...\n"); };
+							break;
+						case "A1": // Skip the following instruction if the key corresponding to the hex value corrently stored
+								   // in register VX is not pressed.
+							break;
+						default:
+							break;
 					}
 				}
 				// FX07 to FX65
 				else if (instruction[0] == "F")
 				{
+					// ie contains the two rightmost digits of the hex number, as in "end of instruction"
 					let ie = instruction.slice(2, 4);
 					switch (ie)
 					{
+						//  FX__
 						case "07": // Store the current value of the delay timer in register VX
 							this.V[parseInt(instruction[1])] = this.DT;
-							console.log("Set register V" + instruction[1] + " to " + this.DT + " (delay timer).\n");
+							if (this.dev) { console.log("> Set register V" + instruction[1] + " to value of DT: 0x" + this.DT.toString(16) + "\n"); };
 							break;
 						case "0A": // Wait for a keypress and store the result in register VX
 							break;
@@ -455,7 +464,12 @@ class Chip8
 
 	reset()
 	{
-		this.memory[0x200] = 0x00e0;
+		if (this.dev)
+		{
+			console.log("Developer mode enabled.\n");
+			console.log("|----------------|\n");
+			console.log("> Chip-8 reset.\n");
+		}
 		this.PC = 0x200;
 	}
 }
@@ -473,15 +487,17 @@ function getRandomIntInclusive(min, max)
 let chip8 = new Chip8;
 ctx.fillStyle = "#000000";
 ctx.fillRect(0, 0, chip8.SCREEN_WIDTH*chip8.SCREEN_SCALE, chip8.SCREEN_HEIGHT*chip8.SCREEN_SCALE);
+
+chip8.reset();
 /* Start Testing */
 chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.memory[0x201] = "F007";
+chip8.memory[0x200] = 0x00e0;
+chip8.memory[0x201] = 0xF007;
 
 /* End Testing */
 
-chip8.reset();
 chip8.execute(2);
 chip8.draw();
 
