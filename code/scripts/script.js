@@ -246,12 +246,16 @@ class Chip8
 		/* Program Counter */
 		this.PC;
 		/* The Stack */
-		this.S = [];
+		this.S = new Array(16);
 		/* The Delay and Sound Timer */
 		this.DT;
 		this.ST;
 		/* In which cycle is the chip in. This number increments with each call to execute and gets reset upon calling said function. */
 		this.ticks = 0;
+		// The lowest address that is allowed to be used by programs. safe address low
+		this.saLow = 0x200;
+		// The highest address that is allowed to be used by programs.
+		this.saHigh = 0xe8f;
 	}
 
 	execute(cycles)
@@ -261,11 +265,12 @@ class Chip8
 			/* Display developer information */
 			if (this.dev)
 			{
-				console.log("|--  Tick " + this.ticks.toString().padStart(3, " ") + "  --|\n");
+				console.log("\n");
+				console.log("%c|--  Tick " + this.ticks.toString().padStart(3, " ") + "  --|", "background: #444444; color: #ffffff");
 				// PC in hex
-				console.log("PC: 0x" + this.PC.toString(16).padStart(4, "0").toUpperCase() + " (hex)\n");
+				console.log("  PC: 0x" + this.PC.toString(16).padStart(4, "0").toUpperCase() + " (hex)\n");
 				// PC in dec
-				console.log("PC: " + this.PC.toString(10).padStart(6, " ") + " (dec)\n");
+				console.log("  PC: " + this.PC.toString(10).padStart(6, " ") + " (dec)\n");
 			}
 
 			let instruction = this.memory[this.PC];
@@ -282,7 +287,7 @@ class Chip8
 				// .toUppercase() allows the memory addresses to contain either uppercase or lowercase letters
 				instruction = instruction.toUpperCase();
 
-				if (this.dev) { console.log("Instruction: 0x" + instruction + " (hex)\n"); };
+				if (this.dev) { console.log("  Instruction: 0x" + instruction + " (hex)\n"); };
 				let i0 = instruction[0];
 				switch (i0)
 				{
@@ -291,17 +296,29 @@ class Chip8
 						{
 							case "00E0": // Clear the screen
 								this.screen.fill(0, 0, this.SCREEN_WIDTH*this.SCREEN_HEIGHT);
-								this.PC += 1;
-								if (this.dev) { console.log("> Cleared the screen.\n"); };
+								if (this.dev) { console.log("  > Cleared the screen.\n"); };
+								this.incrementPC(1);
 								break;
 							case "00EE": // Return from a subroutine
-								this.PC = this.S[this.S.length-1];
-								this.PC += 1;
-								this.S.pop();
-								if (this.dev)
+								if (this.S.length > 0)
 								{
-									console.log("> Return from subroutine to 0x" + this.PC.toString(16) + "\n");
-								};
+									this.PC = this.S[this.S.length-1];
+									this.S.pop();
+
+									if (this.dev)
+									{
+										console.log("  > Return from subroutine to 0x" + this.PC.toString(16) + "\n");
+									}
+								}
+								else
+								{
+									if (this.dev)
+									{
+										console.log("  > Unable to return from subroutine to 0x" + this.S[this.S.length-1] + "\n");
+										console.log("  > S has no values.\n");
+									}
+								}
+								this.incrementPC(1);
 								break;
 							// 0NNN
 							default:     // Execute machine language subroutine at address NNN
@@ -312,7 +329,7 @@ class Chip8
 					case "1": // Jump to address NNN
 						// This turns the instruction slice into a hex number which gets converted automatically to decimal during assignment to this.PC
 						this.PC = parseInt(instruction.slice(1, 4), 16);
-						if (this.dev) { console.log("> Jumped to address " + this.PC + ".\n"); };
+						if (this.dev) { console.log("  > Jumped to address " + this.PC + ".\n"); };
 						break;
 					// 2NNN
 					case "2": // Execute subroutine starting at address NNN
@@ -320,12 +337,22 @@ class Chip8
 						this.PC = parseInt(instruction.slice(1, 4), 16);
 						if (this.dev)
 						{
-							console.log("> Execute subroutine starting at address 0x" + this.PC.toString(16) + ".\n")
+							console.log("  > Execute subroutine starting at address 0x" + this.PC.toString(16) + ".\n")
 							let s = "  S = ";
 							for (let i = 0; i < this.S.length; i++)
 							{
-								s += this.S[i].toString(16);
-								if (i < this.S.length-1) { s+= ", " };
+								if (this.S[i] != null)
+								{
+									s += this.S[i].toString(16);
+									if (i < this.S.length-1) { s+= ", " };
+								}
+								/*
+								else
+								{
+									s += "empty"
+									if (i < this.S.length-1) { s+= ", " };
+								}
+								*/
 							}
 							s += "\n";
 							console.log(s);
@@ -339,15 +366,15 @@ class Chip8
 							let vNN = parseInt(instruction.slice(2, 4), 16);
 							if (vVX == vNN)
 							{
-								this.PC += 2;
+								this.incrementPC(2);
 								if (this.dev)
 								{
-									console.log("> Skipped the following instruction as V"+ iVX.toString(16) + " = 0x" + vNN.toString(16).padStart(2, "0") + ".\n");
+									console.log("  > Skipped the following instruction as V"+ iVX.toString(16) + " == 0x" + vNN.toString(16).padStart(2, "0") + ".\n");
 								}
 							}
 							else
 							{
-								this.PC += 1;
+								this.incrementPC(1);
 							}
 						}
 						break;
@@ -359,15 +386,15 @@ class Chip8
 							let vNN = parseInt(instruction.slice(2, 4), 16);
 							if (vVX != vNN)
 							{
-								this.PC += 2;
+								this.incrementPC(2);
 								if (this.dev)
 								{
-									console.log("> Skipped the following instruction as V"+ iVX.toString(16) + " != 0x" + vNN.toString(16).padStart(2, "0") + ".\n");
+									console.log("  > Skipped the following instruction as V"+ iVX.toString(16) + " != 0x" + vNN.toString(16).padStart(2, "0") + ".\n");
 								}
 							}
 							else
 							{
-								this.PC += 1;
+								this.incrementPC(1);
 							}
 						}
 						break;
@@ -380,15 +407,15 @@ class Chip8
 							let vVY = this.V[iVY];
 							if (vVX == vVY)
 							{
-								this.PC += 2;
+								this.incrementPC(2);
 								if (this.dev)
 								{
-									console.log("> Skipped the following instruction as V"+ iVX.toString(16) + " == V" + iVY.toString(16) + ".\n");
+									console.log("  > Skipped the following instruction as V"+ iVX.toString(16) + " == V" + iVY.toString(16) + ".\n");
 								}
 							}
 							else
 							{
-								this.PC += 1;
+								this.incrementPC(1);
 							}
 						}
 						break;
@@ -400,10 +427,10 @@ class Chip8
 							let vNN = parseInt(instruction.slice(2, 4), 16);
 
 							this.V[iVX] = vNN;
-							this.PC += 1;
+							this.incrementPC(1);
 							if (this.dev)
 							{
-								console.log("> Stored the value 0x" + vNN.toString(16) + " in register V" + iVX.toString(16) + ".\n");
+								console.log("  > Stored the value 0x" + vNN.toString(16) + " in register V" + iVX.toString(16) + ".\n");
 							}
 						}
 						break;
@@ -421,10 +448,10 @@ class Chip8
 							this.V[iVX] = this.V[iVX] % 256;
 							//console.log("Modulo: " + this.V[iVX] + "\n");
 
-							this.PC += 1;
+							this.incrementPC(1);
 							if (this.dev)
 							{
-								console.log("> Added the value 0x" + vNN.toString(16) + " to register V" + iVX.toString(16) + ".\n");
+								console.log("  > Added the value 0x" + vNN.toString(16) + " to register V" + iVX.toString(16) + ".\n");
 								console.log("  Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
 							}
 						}
@@ -465,12 +492,68 @@ class Chip8
 						break;
 					// 9XY0
 					case "9": // Skip the following instruction if the value of register VX is not equal to the value of register VY
+						{	// Removing these brackets leads to iVX errors, as it has been declared above already.
+							let iVX = parseInt(instruction.slice(1, 2), 16);
+							let vVX = this.V[iVX];
+							let iVY = parseInt(instruction.slice(2, 3), 16);
+							let vVY = this.V[iVY];
+							if (vVX != vVY)
+							{
+								this.incrementPC(2);
+								if (this.dev)
+								{
+									console.log("  > Skipped the following instruction as V"+ iVX.toString(16) + " != V" + iVY.toString(16) + ".\n");
+								}
+							}
+							else
+							{
+								this.incrementPC(1);
+							}
+						}
 						break;
 					// ANNN
 					case "A": // Store memory address NNN in register I
+						{
+							let a = parseInt(instruction.slice(1, 4), 16);
+							// Only 
+							if (a >= this.saLow && a <= this.saHigh)
+							{
+								this.I = a;
+								if (this.dev)
+								{
+									console.log("  > Stored memory address 0x"+ this.I.toString(16) + " in register I.\n");
+								}
+							}
+							else
+							{
+								console.log("  > Unable to store memory address 0x"+ a.toString(16) + " in register I.\n");
+								console.log("  > Memory address out of bounds.\n");
+								console.log("  > Lowest address is 0x200, highest is 0xe8f.\n");
+							}
+
+							this.incrementPC(1);
+						}
 						break;
 					// BNNN
 					case "B": // Jump to address NNN + V0
+						{
+							let a = parseInt(instruction.slice(1, 4), 16) + parseInt(this.V[0]);
+
+							if (a >= this.saLow && a <= this.saHigh)
+							{
+								this.PC = a;
+								if (this.dev)
+								{
+									console.log("  > Jumped to address 0x"+ this.PC.toString(16) + ".\n");
+								}
+							}
+							else
+							{
+								console.log("  > Unable to jump to address 0x"+ a.toString(16) + ".\n");
+								console.log("  > Memory address out of bounds.\n");
+								console.log("  > Lowest address is 0x200, highest is 0xe8f.\n");
+							}
+						}
 						break;
 					// CXNN
 					case "C": // Set VX to a random number with a mask of NN
@@ -505,8 +588,18 @@ class Chip8
 						{
 							//  FX__
 							case "07": // Store the current value of the delay timer in register VX
-								this.V[parseInt(instruction[1])] = this.DT;
-								if (this.dev) { console.log("> Set register V" + instruction[1] + " to value of DT: 0x" + this.DT.toString(16) + "\n"); };
+								{	// Removing these brackets leads to iVX errors, as it has been declared above already.
+									let iV = parseInt(instruction[1], 16);
+									if (iV >= 0 && iV < 16)
+									{
+										this.V[iV] = this.DT;
+										if (this.dev)
+										{
+											console.log("  > Stored the value of DT in register V" + iV.toString(16) + ".\n");
+										}
+									}
+									this.incrementPC(1);
+								}
 								break;
 							case "0A": // Wait for a keypress and store the result in register VX
 								break;
@@ -554,6 +647,18 @@ class Chip8
 		}
 	}
 
+	incrementPC(n)
+	{
+		if (this.PC+n <= this.saHigh)
+		{
+			this.PC += n;
+		}
+		else
+		{
+			console.warn("  > Reached end of memory.\n");
+		}
+	}
+
 	reset()
 	{
 		if (this.dev)
@@ -586,13 +691,16 @@ chip8.reset();
 chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.memory[0x200] = 0x00e0;
+chip8.V[0] = 0x00;
+chip8.V[1] = 0xff;
+chip8.memory[0x200] = 0xf007;
 chip8.memory[0x201] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x202] = 0x00e0;
 chip8.memory[0x203] = 0x00e0;
 chip8.memory[0x204] = 0x00e0; // Start of subroutine. Jump to address 201
 chip8.memory[0x205] = 0x00ee; // End of subroutine
 chip8.memory[0x206] = 0x00e0;
+chip8.memory[0xe8f] = 0x00e0;
 
 console.log("Memory Address" + " " + "Instruction\n");
 for (let i = 0; i < chip8.memory.length; i++)
