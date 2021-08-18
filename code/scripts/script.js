@@ -226,14 +226,6 @@ class Button
 	}
 }
 
-class Memory
-{
-	constructor()
-	{
-		this.Data = [];
-	}
-}
-
 class Chip8
 {
 	constructor()
@@ -246,7 +238,7 @@ class Chip8
 		this.SCREEN_SCALE = 20;
 		/* An array of 0's and 1's for displaying graphics */
 		this.screen = new Array(this.SCREEN_WIDTH*this.SCREEN_HEIGHT); // 64x32
-		this.memory = []; // 4096 bytes
+		this.memory = new Array(4096); // 4096 bytes
 		/* Data Registers 0x0 to 0xe */
 		this.V = new Array(16);
 		/* Address Register*/
@@ -258,6 +250,8 @@ class Chip8
 		/* The Delay and Sound Timer */
 		this.DT;
 		this.ST;
+		/* In which cycle is the chip in. This number increments with each call to execute and gets reset upon calling said function. */
+		this.ticks = 0;
 	}
 
 	execute(cycles)
@@ -267,7 +261,7 @@ class Chip8
 			/* Display developer information */
 			if (this.dev)
 			{
-				console.log("|----------------|\n");
+				console.log("|--  Tick " + this.ticks.toString().padStart(3, " ") + "  --|\n");
 				// PC in hex
 				console.log("PC: 0x" + this.PC.toString(16).padStart(4, "0").toUpperCase() + " (hex)\n");
 				// PC in dec
@@ -301,8 +295,16 @@ class Chip8
 								if (this.dev) { console.log("> Cleared the screen.\n"); };
 								break;
 							case "00EE": // Return from a subroutine
+								this.PC = this.S[this.S.length-1];
+								this.PC += 1;
+								this.S.pop();
+								if (this.dev)
+								{
+									console.log("> Return from subroutine to 0x" + this.PC.toString(16) + "\n");
+								};
 								break;
-							default:     // Execute subroutine at address NNN
+							// 0NNN
+							default:     // Execute machine language subroutine at address NNN
 								break;
 						}
 						break;
@@ -314,6 +316,20 @@ class Chip8
 						break;
 					// 2NNN
 					case "2": // Execute subroutine starting at address NNN
+						this.S.push(this.PC);
+						this.PC = parseInt(instruction.slice(1, 4), 16);
+						if (this.dev)
+						{
+							console.log("> Execute subroutine starting at address 0x" + this.PC.toString(16) + ".\n")
+							let s = "  S = ";
+							for (let i = 0; i < this.S.length; i++)
+							{
+								s += this.S[i].toString(16);
+								if (i < this.S.length-1) { s+= ", " };
+							}
+							s += "\n";
+							console.log(s);
+						};
 						break;
 					// 3XNN
 					case "3": // Skip the following instruction if the value of register VX equals NN
@@ -398,12 +414,12 @@ class Chip8
 							let vVX = parseInt(this.V[iVX]);
 							let vNN = parseInt(instruction.slice(2, 4), 16);
 
-							console.log("Start: " + vVX + "\n");
+							//console.log("Start: " + vVX + "\n");
 							this.V[iVX] = vVX + vNN;
-							console.log("Add: " + this.V[iVX] + "\n");
+							//console.log("Add: " + this.V[iVX] + "\n");
 							// If the stored value exceeds 255 it will "wraparound". So 256 becomes 0, 257 becomes 1 and so on.
 							this.V[iVX] = this.V[iVX] % 256;
-							console.log("Modulo: " + this.V[iVX] + "\n");
+							//console.log("Modulo: " + this.V[iVX] + "\n");
 
 							this.PC += 1;
 							if (this.dev)
@@ -519,6 +535,7 @@ class Chip8
 			// This is done inside the statements.
 			// this.PC += 1;
 			cycles--;
+			this.ticks += 1;
 		}
 	}
 
@@ -546,6 +563,7 @@ class Chip8
 			console.log("> Chip-8 reset.\n");
 		}
 		this.PC = 0x200;
+		this.ticks = 0;
 	}
 }
 
@@ -568,14 +586,26 @@ chip8.reset();
 chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.V[0xa] = 0xec;
-chip8.V[0xb] = 0xec;
 chip8.memory[0x200] = 0x00e0;
-chip8.memory[0x201] = 0x7a0f;
+chip8.memory[0x201] = 0x2204; // Goto subroutine at 204
+chip8.memory[0x202] = 0x00e0;
 chip8.memory[0x203] = 0x00e0;
+chip8.memory[0x204] = 0x00e0; // Start of subroutine. Jump to address 201
+chip8.memory[0x205] = 0x00ee; // End of subroutine
+chip8.memory[0x206] = 0x00e0;
+
+console.log("Memory Address" + " " + "Instruction\n");
+for (let i = 0; i < chip8.memory.length; i++)
+{
+	if (chip8.memory[i] != null)
+	{
+		//console.log("Chip-8 Memory at 0x" + i.toString(16) + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+		console.log(("0x" + i.toString(16)).padStart(14, " ") + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+	}
+}
 /* End Testing */
 
-chip8.execute(3);
+chip8.execute(5);
 chip8.draw();
 
 // Time variables
