@@ -346,13 +346,6 @@ class Chip8
 									s += this.S[i].toString(16);
 									if (i < this.S.length-1) { s+= ", " };
 								}
-								/*
-								else
-								{
-									s += "empty"
-									if (i < this.S.length-1) { s+= ", " };
-								}
-								*/
 							}
 							s += "\n";
 							console.log(s);
