@@ -256,6 +256,7 @@ class Chip8
 		this.saLow = 0x200;
 		// The highest address that is allowed to be used by programs.
 		this.saHigh = 0xe8f;
+		this.warnColor = "#ff8800";
 	}
 
 	execute(cycles)
@@ -314,8 +315,8 @@ class Chip8
 								{
 									if (this.dev)
 									{
-										console.log("  > Unable to return from subroutine to 0x" + this.S[this.S.length-1] + "\n");
-										console.log("  > S has no values.\n");
+										console.log("  ! Unable to return from subroutine to 0x" + this.S[this.S.length-1] + "\n");
+										console.log("  ! S has no values.\n");
 									}
 								}
 								this.incrementPC(1);
@@ -456,9 +457,51 @@ class Chip8
 						{
 							// 8XY_
 							case "0": // Store the value of register VY in register VX
-								if (this.dev) { console.log("Store the value of register VY in register VX.\n"); };
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									this.V[iVX] = vVY;
+									// If the stored value exceeds 255 it will "wraparound". So 256 becomes 0, 257 becomes 1 and so on.
+									this.V[iVX] = this.V[iVX] % 256;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Stored the value of register V" + iVY.toString(16) + " in register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "1": // Set VX to VX OR VY
+								{
+									// Not completely certain if this is the way it's supposed to work.
+									// VX gets value of VX if it is not 0x0. If value of VX is 0x0, the VX gets assigned the value of VY.
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									// If the stored value exceeds 255 it will "wraparound". So 256 becomes 0, 257 becomes 1 and so on.
+									this.V[iVX] = (vVX % 256) || (vVY % 256);
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										if (this.V[iVX] == vVX % 256)
+										{
+											console.log("  > Stored the value of register V" + iVX.toString(16) + " in register V" + iVX.toString(16) + ".\n");
+											console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+										else if (this.V[iVX] == vVY % 256)
+										{
+											console.log("  > Stored the value of register V" + iVY.toString(16) + " in register V" + iVX.toString(16) + ".\n");
+											console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+									}
+								}
 								break;
 							case "2": // Set VX to VX AND VY
 								break;
@@ -519,9 +562,9 @@ class Chip8
 							}
 							else
 							{
-								console.log("  > Unable to store memory address 0x"+ a.toString(16) + " in register I.\n");
-								console.log("  > Memory address out of bounds.\n");
-								console.log("  > Lowest address is 0x200, highest is 0xe8f.\n");
+								console.log("  ! Unable to store memory address 0x" + a.toString(16) + " in register I.\n");
+								console.log("  ! Memory address out of bounds.\n");
+								console.log("  ! Lowest address is 0x200, highest is 0xe8f.\n");
 							}
 
 							this.incrementPC(1);
@@ -542,9 +585,9 @@ class Chip8
 							}
 							else
 							{
-								console.log("  > Unable to jump to address 0x"+ a.toString(16) + ".\n");
-								console.log("  > Memory address out of bounds.\n");
-								console.log("  > Lowest address is 0x200, highest is 0xe8f.\n");
+								console.log("  ! Unable to jump to address 0x"+ a.toString(16) + ".\n");
+								console.log("  ! Memory address out of bounds.\n");
+								console.log("  ! Lowest address is 0x200, highest is 0xe8f.\n");
 							}
 						}
 						break;
@@ -597,18 +640,110 @@ class Chip8
 							case "0A": // Wait for a keypress and store the result in register VX
 								break;
 							case "15": // Set the delay timer to the value of register VX
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+
+									this.DT = vVX % 256;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Set DT to the value of register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of DT is 0x" + this.DT.toString(16) + ".\n");
+									}
+								}
 								break;
 							case "18": // Set the sound timer to the value of register VX
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+
+									this.ST = vVX % 256;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Set ST to the value of register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of ST is 0x" + this.ST.toString(16) + ".\n");
+									}
+								}
 								break;
 							case "1E": // Add the value stored in register VX to register I
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+
+									this.I = (this.I + vVX) % 256;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Added the value of register V" + iVX.toString(16) + " to I.\n");
+										console.log("  > Value of I is 0x" + this.I.toString(16) + ".\n");
+									}
+								}
 								break;
 							case "29": // Set I to the memory address of the sprite data corresponding to the hexadecimal digit stored in register VX
 								break;
 							case "33": // Store the binary-coded decimal equivalent of the value stored in register VX at addresses I, I+1 and I+2
 								break;
 							case "55": // Store the values of registers V0 to VX inclusive in memory starting at address I. I is set to I+X+1 after operation
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let a = parseInt(this.I, 16);
+
+									for (let i = 0; i <= iVX; i++)
+									{
+										this.memory[a+i] = this.V[i];
+									}
+
+									this.I = this.I + iVX + 1;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Stored the values of register V0 to V" + iVX.toString(16) + " in memory starting at 0x" + a.toString(16) + ".\n");
+										console.log("  > Set I to 0x" + this.I.toString(16) + ".\n");
+										let t = this.memory.slice(a, a+iVX+1);
+										console.log("Memory Address" + " " + "Instruction\n");
+										for (let i = 0; i <= iVX; i++)
+										{
+											console.log(("0x" + (a+i).toString(16).padStart(3, "0")).padStart(14, " ") + " " + t[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+											//console.log(("0x" + i.toString(16)).padStart(14, " ") + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+										}
+									}
+								}
 								break;
 							case "65": // Fill registers V0 to VX inclusive with the values stored in memory starting at address I. I is set to I+X+1 after operation
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let a = this.I;
+
+									for (let i = 0; i <= iVX; i++)
+									{
+										this.V[i] = this.memory[a+i];
+									}
+
+									this.I = this.I + iVX + 1;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Filled registers V0 to V" + iVX.toString(16) + " with the values in memory starting at 0x" + a.toString(16) + ".\n");
+										console.log("  > Set I to 0x" + this.I.toString(16) + ".\n");
+										let t = this.V.slice(0, iVX+1);
+
+										console.log("V Register" + " " + "Instruction\n");
+										for (let i = 0; i <= iVX; i++)
+										{
+											console.log(("0x" + (i).toString(16)).padStart(10, " ") + " " + this.V[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+											//console.log(("0x" + i.toString(16)).padStart(14, " ") + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+										}
+									}
+								}
 								break;
 							default:
 								break;
@@ -660,7 +795,14 @@ class Chip8
 			console.log("|----------------|\n");
 			console.log("> Chip-8 reset.\n");
 		}
+
+		this.screen.fill(0);
+		this.memory.fill(0);
+		this.V.fill(0);
+		this.I = 0x0;
 		this.PC = 0x200;
+		this.DT = 0x0;
+		this.ST = 0x0;
 		this.ticks = 0;
 	}
 }
@@ -684,9 +826,12 @@ chip8.reset();
 chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.V[0] = 0x00;
-chip8.V[1] = 0xff;
-chip8.memory[0x200] = 0xf007;
+chip8.V[0] = 0x0;
+chip8.V[1] = 0x0;
+chip8.V[4] = 0x0;
+chip8.memory[0xff] = 0x00ee;
+chip8.I = 0x200;
+chip8.memory[0x200] = 0xf565;
 chip8.memory[0x201] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x202] = 0x00e0;
 chip8.memory[0x203] = 0x00e0;
@@ -700,8 +845,11 @@ for (let i = 0; i < chip8.memory.length; i++)
 {
 	if (chip8.memory[i] != null)
 	{
-		//console.log("Chip-8 Memory at 0x" + i.toString(16) + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
-		console.log(("0x" + i.toString(16)).padStart(14, " ") + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+		if (chip8.memory[i] != 0)
+		{
+			//console.log("Chip-8 Memory at 0x" + i.toString(16) + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+			console.log(("0x" + i.toString(16).padStart(3, "0").toUpperCase()).padStart(14, " ") + " " + chip8.memory[i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+		}
 	}
 }
 /* End Testing */
