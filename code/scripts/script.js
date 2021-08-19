@@ -815,6 +815,7 @@ class Chip8
 							for (let y = 0; y < n; y++)
 							{
 								let s = this.memory[this.I+y].toString(2);
+								s = s.padStart(8, "0");
 								console.log(s);
 								// Draw single row of sprite. Maximum of 8 pixels wide
 								for (let x = 0; x < 8; x++)
@@ -822,22 +823,25 @@ class Chip8
 									// If a pixel in the sprite data is on.
 									if (parseInt(s[x], 2) == 1)
 									{
+										// x and y draw coord. Pixel outside of the screen wrap around. so a pixel at x:64 becomes pixel at x:0
+										let dX = (vVX+x) % 64;
+										let dY = (vVY+y) % 32;
 										// If the pixel to be drawn is 1 and the pixel on screen is 1, turn the screen pixel off.
-										if (this.screen[(vVX+x) + (vVY+y) * this.SCREEN_WIDTH] == 1)
+										if (this.screen[dX + dY * this.SCREEN_WIDTH] == 1)
 										{
-											this.screen[(vVX+x) + (vVY+y) * this.SCREEN_WIDTH] = 0;
+											this.screen[dX + dY * this.SCREEN_WIDTH] = 0;
 											dOAP = true;
 										}
 										// otherwise, draw a pixel on screen.
 										else
 										{
-											this.screen[(vVX+x) + (vVY+y) * this.SCREEN_WIDTH] = 1;
+											this.screen[dX + dY * this.SCREEN_WIDTH] = 1;
 										}
 									}
 								}
 							}
 
-							// Has any sprite pixel that was on, been drawn over any screen pixel that was on.
+							// Has any sprite pixel that was turned on been drawn over any screen pixel that was on.
 							if (dOAP)
 							{
 								this.V[0xf] = 0x1;
@@ -851,7 +855,7 @@ class Chip8
 							this.incrementPC(1);
 							if (this.dev)
 							{
-								console.log("  > Drew a sprite at position " + vVX + "|" + vVY + ".\n");
+								console.log("  > Drew a sprite from memory starting at address 0x" + this.I.toString(16) + " at screen position " + vVX + "|" + vVY + ".\n");
 								console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16).toUpperCase() + ".\n");
 							}
 						}
@@ -1119,11 +1123,11 @@ chip8.V[0] = 0x0;
 chip8.V[1] = 0x0;
 chip8.V[4] = 0x0;
 chip8.memory[0xff] = 0x00ee;
-chip8.I = 0x0;
-chip8.memory[0x200] = 0xD005;
-chip8.memory[0x201] = 0xC040;
-chip8.memory[0x202] = 0xC120;
-chip8.memory[0x203] = 0xD015;
+chip8.I = 50;
+chip8.memory[0x200] = 0xD005; // Draw sprite at V0 V0
+chip8.memory[0x201] = 0xC040; // Random value for V0
+chip8.memory[0x202] = 0xC120; // Random value for V1
+chip8.memory[0x203] = 0xD015; // Draw sprite at V0 V1
 /*
 chip8.memory[0x202] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x203] = 0x00e0;
