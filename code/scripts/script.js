@@ -485,27 +485,67 @@ class Chip8
 									let vVY = parseInt(this.V[iVY]);
 
 									// If the stored value exceeds 255 it will "wraparound". So 256 becomes 0, 257 becomes 1 and so on.
-									this.V[iVX] = (vVX % 256) || (vVY % 256);
+									this.V[iVX] = (vVX % 256) | (vVY % 256);
 
 									this.incrementPC(1);
 									if (this.dev)
 									{
 										if (this.V[iVX] == vVX % 256)
 										{
-											console.log("  > Stored the value of register V" + iVX.toString(16) + " in register V" + iVX.toString(16) + ".\n");
+											console.log("  > Set the value of register V" + iVX.toString(16) + " to the value of register V" + iVX.toString(16) + ".\n");
 											console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
 										}
 										else if (this.V[iVX] == vVY % 256)
 										{
-											console.log("  > Stored the value of register V" + iVY.toString(16) + " in register V" + iVX.toString(16) + ".\n");
+											console.log("  > Set the value of register V" + iVX.toString(16) + " to the value of register V" + iVY.toString(16) + ".\n");
 											console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+										else
+										{
+											console.log("  > Value of register V" + iVX.toString(16) + " not changed.\n");
 										}
 									}
 								}
 								break;
 							case "2": // Set VX to VX AND VY
+								{
+									// Not completely certain if this is the way it's supposed to work.
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									// If the stored value exceeds 255 it will "wraparound". So 256 becomes 0, 257 becomes 1 and so on.
+									this.V[iVX] = (vVX & vVY) % 256;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Set the value of register V" + iVX.toString(16) + " to V" + iVX.toString(16) + " and V" + iVY.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "3": // Set VX to VX XOR VY
+								{
+									// Not completely certain if this is the way it's supposed to work.
+									// VX gets value of VX if it is not 0x0. If value of VX is 0x0, the VX gets assigned the value of VY.
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									// If the stored value exceeds 255 it will "wraparound". So 256 becomes 0, 257 becomes 1 and so on.
+									//this.V[iVX] = (vVX % 256) ^ (vVY % 256);
+									this.V[iVX] = vVX ^ vVY;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Set the value of register V" + iVX.toString(16) + " to the value of register V" + iVX.toString(16) + " XOR register V" + iVY.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "4": // Add the value of register VY to register VX. Set VF to 01 if a carry occurs.
 									  // Set VF to 00 if a carry does not occur
@@ -674,7 +714,8 @@ class Chip8
 									let iVX = parseInt(instruction.slice(1, 2), 16);
 									let vVX = parseInt(this.V[iVX]);
 
-									this.I = (this.I + vVX) % 256;
+									// The I register can store memory address 0x000 to 0xfff
+									this.I = (this.I + vVX) % 4096;
 
 									this.incrementPC(1);
 									if (this.dev)
@@ -826,12 +867,12 @@ chip8.reset();
 chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.V[0] = 0x0;
-chip8.V[1] = 0x0;
+chip8.V[0] = 0x01;
+chip8.V[1] = 0x05;
 chip8.V[4] = 0x0;
 chip8.memory[0xff] = 0x00ee;
 chip8.I = 0x200;
-chip8.memory[0x200] = 0xf565;
+chip8.memory[0x200] = 0x8013;
 chip8.memory[0x201] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x202] = 0x00e0;
 chip8.memory[0x203] = 0x00e0;
