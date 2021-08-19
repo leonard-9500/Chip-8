@@ -549,18 +549,151 @@ class Chip8
 								break;
 							case "4": // Add the value of register VY to register VX. Set VF to 01 if a carry occurs.
 									  // Set VF to 00 if a carry does not occur
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									let v = vVX + vVY;
+
+									// A carry occurs as the value gets wrapped around.
+									if (v > 255)
+									{
+										this.V[iVX] = v % 256;
+										this.V[0xf] = 0x1;
+									}
+									// No carry
+									else
+									{
+										this.V[iVX] = v;
+										this.V[0xf] = 0x0;
+									}
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Added the value of register V" + iVY.toString(16) + " to register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "5": // Subtract the value of register VY from register VX. Set VF to 00 if a borrow occurs.
 									  // Set VF to 01 if a borrow does not occur.
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									let v = vVX - vVY;
+
+									// A borrow occurs as the subtrahend is greater than the minuend.
+									if (vVY > vVX)
+									{
+										this.V[iVX] = -v;
+										this.V[0xf] = 0x0;
+									}
+									// No borrow
+									else
+									{
+										this.V[iVX] = v;
+										this.V[0xf] = 0x1;
+									}
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Subtracted the value of register V" + iVY.toString(16) + " from register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "6": // Store the value of register VY shifted right one bit in register VX.
-									  // Set register VF to the least significant bit prior to the shift VY is unchanged
+									  // Set register VF to the least significant bit prior to the shift. VY is unchanged
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									this.V[iVX] = vVY >> 1;
+									// Create string of binary number
+									let b = this.V[iVY].toString(2);
+									// Assign least significant bit
+									this.V[0xf] = b[b.length-1];
+
+									//console.log(b);
+									//console.log(b.length);
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Stored the value of register V" + iVY.toString(16) + " shifted right one bit in register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "7": // Set register VX to the value of VY minus VX. Set VF to 00 if a borrow occurs.
 									  // Set VF to 01 if a borrow does not occur.
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									let v = vVY - vVX;
+
+									// A borrow occurs as the subtrahend is greater than the minuend.
+									if (vVX > vVY)
+									{
+										this.V[iVX] = -v;
+										this.V[0xf] = 0x0;
+									}
+									// No borrow
+									else
+									{
+										this.V[iVX] = v;
+										this.V[0xf] = 0x1;
+									}
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Subtracted the value of register V" + iVX.toString(16) + " from register V" + iVY.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16) + ".\n");
+									}
+								}
 								break;
 							case "E": // Store the value of register VY shifted left one bit in register VX.
-									  // Set register VF to the most significant bit prior to the shift VY is unchanged.
+									  // Set register VF to the most significant bit prior to the shift. VY is unchanged.
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let iVY = parseInt(instruction.slice(2, 3), 16);
+									let vVY = parseInt(this.V[iVY]);
+
+									this.V[iVX] = vVY << 1;
+									// Create string of binary number
+									let b = this.V[iVY].toString(2);
+									// Assign most significant bit
+									this.V[0xf] = b[0];
+
+									//console.log(b);
+									//console.log(b.length);
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Stored the value of register V" + iVY.toString(16) + " shifted left one bit in register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16) + ".\n");
+									}
+								}
 								break;
 							default:
 								break;
@@ -633,6 +766,20 @@ class Chip8
 						break;
 					// CXNN
 					case "C": // Set VX to a random number with a mask of NN
+						{	// Removing these brackets leads to iVX errors, as it has been declared above already.
+							let iVX = parseInt(instruction.slice(1, 2), 16);
+							let m = parseInt(instruction.slice(2, 4), 16);
+
+							// The byte mask acts as the upper bound for the random numbers. The largest possible random number is equal to m.
+							this.V[iVX] = getRandomIntInclusive(0, 255) & m;
+							this.incrementPC(1);
+
+							if (this.dev)
+							{
+								console.log("  > Set register V" + iVX.toString(16) + " to a random number with 0x" + m.toString(16).padStart(2, "0").toUpperCase() + " as byte mask.\n");
+								console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16).padStart(2, "0").toUpperCase() + ".\n");
+							}
+						}
 						break;
 					// DXYN
 					case "D": // Draw a sprite at position VX, VY with N bytes of sprite data starting at the address stored in I.
@@ -867,16 +1014,16 @@ chip8.reset();
 chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.V[0] = 0x01;
-chip8.V[1] = 0x05;
+chip8.V[0] = 0x00;
+chip8.V[1] = 0x0f;
 chip8.V[4] = 0x0;
 chip8.memory[0xff] = 0x00ee;
 chip8.I = 0x200;
-chip8.memory[0x200] = 0x8013;
+chip8.memory[0x200] = 0x801e;
 chip8.memory[0x201] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x202] = 0x00e0;
 chip8.memory[0x203] = 0x00e0;
-chip8.memory[0x204] = 0x00e0; // Start of subroutine. Jump to address 201
+chip8.memory[0x204] = 0x00e0; // Start of subroutine. Jump to address 201 + 1
 chip8.memory[0x205] = 0x00ee; // End of subroutine
 chip8.memory[0x206] = 0x00e0;
 chip8.memory[0xe8f] = 0x00e0;
