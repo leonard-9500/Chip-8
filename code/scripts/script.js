@@ -257,6 +257,23 @@ class Chip8
 		// The highest address that is allowed to be used by programs.
 		this.saHigh = 0xe8f;
 		this.warnColor = "#ff8800";
+		this.fontSprite = [0xf0, 0x90, 0x90, 0x90, 0xf0, // 0
+						   0x20, 0x60, 0x20, 0x20, 0x70, // 1
+						   0xf0, 0x10, 0xf0, 0x80, 0xf0, // 2
+						   0xf0, 0x10, 0xf0, 0x10, 0xf0, // 3
+						   0x90, 0x90, 0xf0, 0x10, 0x10, // 4
+						   0xf0, 0x80, 0xf0, 0x10, 0xf0, // 5
+						   0xf0, 0x80, 0xf0, 0x90, 0xf0, // 6
+						   0xf0, 0x10, 0x20, 0x40, 0x40, // 7
+						   0xf0, 0x90, 0xf0, 0x90, 0xf0, // 8
+						   0xf0, 0x90, 0xf0, 0x10, 0xf0, // 9
+						   0xf0, 0x90, 0xf0, 0x90, 0x90, // A
+						   0xe0, 0x90, 0xe0, 0x90, 0xe0, // B
+						   0xf0, 0x80, 0x80, 0x80, 0xf0, // C
+						   0xe0, 0x90, 0x90, 0x90, 0xe0, // D
+						   0xf0, 0x80, 0xf0, 0x80, 0xf0, // E
+						   0xf0, 0x80, 0xf0, 0x80, 0x80] // F
+		this.fontSpriteMemStart = 0x0;
 	}
 
 	execute(cycles)
@@ -446,7 +463,7 @@ class Chip8
 							if (this.dev)
 							{
 								console.log("  > Added the value 0x" + vNN.toString(16) + " to register V" + iVX.toString(16) + ".\n");
-								console.log("  Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+								console.log("  > Value of register V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
 							}
 						}
 						break;
@@ -771,7 +788,7 @@ class Chip8
 							let m = parseInt(instruction.slice(2, 4), 16);
 
 							// The byte mask acts as the upper bound for the random numbers. The largest possible random number is equal to m.
-							this.V[iVX] = getRandomIntInclusive(0, 255) & m;
+							this.V[iVX] = getRandomIntInclusive(0, m);
 							this.incrementPC(1);
 
 							if (this.dev)
@@ -784,6 +801,60 @@ class Chip8
 					// DXYN
 					case "D": // Draw a sprite at position VX, VY with N bytes of sprite data starting at the address stored in I.
 							  // Set VF to 01 if any set pixels are changed to unset, and 00 otherwise.
+						{
+							let iVX = parseInt(instruction.slice(1, 2), 16);
+							let vVX = parseInt(this.V[iVX]);
+							let iVY = parseInt(instruction.slice(2, 3), 16);
+							let vVY = parseInt(this.V[iVY]);
+							let n = parseInt(instruction.slice(3, 4), 16);
+
+							// Has the sprite been drawn over any screen pixels that were already on.
+							let dOAP = false;
+
+							// Draw row by row. Maximum of 15 rows.
+							for (let y = 0; y < n; y++)
+							{
+								let s = this.memory[this.I+y].toString(2);
+								console.log(s);
+								// Draw single row of sprite. Maximum of 8 pixels wide
+								for (let x = 0; x < 8; x++)
+								{
+									// If a pixel in the sprite data is on.
+									if (parseInt(s[x], 2) == 1)
+									{
+										// If the pixel to be drawn is 1 and the pixel on screen is 1, turn the screen pixel off.
+										if (this.screen[(vVX+x) + (vVY+y) * this.SCREEN_WIDTH] == 1)
+										{
+											this.screen[(vVX+x) + (vVY+y) * this.SCREEN_WIDTH] = 0;
+											dOAP = true;
+										}
+										// otherwise, draw a pixel on screen.
+										else
+										{
+											this.screen[(vVX+x) + (vVY+y) * this.SCREEN_WIDTH] = 1;
+										}
+									}
+								}
+							}
+
+							// Has any sprite pixel that was on, been drawn over any screen pixel that was on.
+							if (dOAP)
+							{
+								this.V[0xf] = 0x1;
+							}
+							// Otherwise
+							else
+							{
+								this.V[0xf] = 0x0;
+							}
+
+							this.incrementPC(1);
+							if (this.dev)
+							{
+								console.log("  > Drew a sprite at position " + vVX + "|" + vVY + ".\n");
+								console.log("  > Value of register VF is 0x" + this.V[0xf].toString(16).toUpperCase() + ".\n");
+							}
+						}
 						break;
 					// EX9E or EXA1
 					case "E":
@@ -875,6 +946,33 @@ class Chip8
 							case "29": // Set I to the memory address of the sprite data corresponding to the hexadecimal digit stored in register VX
 								break;
 							case "33": // Store the binary-coded decimal equivalent of the value stored in register VX at addresses I, I+1 and I+2
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+
+									let s = vVX.toString(10);
+									s = s.padStart(3, "0");
+
+									console.log(s);
+
+									this.memory[this.I] = s[0];
+									this.memory[this.I+1] = s[1];
+									this.memory[this.I+2] = s[2];
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										let aI = this.I;
+										console.log("  > Stored the bcd equivalent of the value of V" + iVX.toString(16) + " at addresses 0x" + this.I.toString(16) + ", 0x" + (this.I+1).toString(16) + " and 0x" + (this.I+2).toString(16) + ".\n");
+										console.log("  > Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+
+										console.log("Memory Address" + " " + "Instruction\n");
+										for (let i = 0; i < 3; i++)
+										{
+											console.log(("0x" + (this.I+i).toString(16).padStart(3, "0")).padStart(14, " ") + " " + this.memory[this.I+i].toString(16).padStart(4, "0").toUpperCase() + "\n");
+										}
+									}
+								}
 								break;
 							case "55": // Store the values of registers V0 to VX inclusive in memory starting at address I. I is set to I+X+1 after operation
 								{
@@ -992,6 +1090,10 @@ class Chip8
 		this.DT = 0x0;
 		this.ST = 0x0;
 		this.ticks = 0;
+		for (let i = 0; i < this.fontSprite.length; i++)
+		{
+			this.memory[this.fontSpriteMemStart+i] = this.fontSprite[i];
+		}
 	}
 }
 
@@ -1011,22 +1113,25 @@ ctx.fillRect(0, 0, chip8.SCREEN_WIDTH*chip8.SCREEN_SCALE, chip8.SCREEN_HEIGHT*ch
 
 chip8.reset();
 /* Start Testing */
-chip8.screen[216] = 1;
 
 chip8.DT = "0f";
-chip8.V[0] = 0x00;
-chip8.V[1] = 0x0f;
+chip8.V[0] = 0x0;
+chip8.V[1] = 0x0;
 chip8.V[4] = 0x0;
 chip8.memory[0xff] = 0x00ee;
-chip8.I = 0x200;
-chip8.memory[0x200] = 0x801e;
-chip8.memory[0x201] = 0x2204; // Goto subroutine at 204
-chip8.memory[0x202] = 0x00e0;
+chip8.I = 0x0;
+chip8.memory[0x200] = 0xD005;
+chip8.memory[0x201] = 0xC040;
+chip8.memory[0x202] = 0xC120;
+chip8.memory[0x203] = 0xD015;
+/*
+chip8.memory[0x202] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x203] = 0x00e0;
 chip8.memory[0x204] = 0x00e0; // Start of subroutine. Jump to address 201 + 1
 chip8.memory[0x205] = 0x00ee; // End of subroutine
 chip8.memory[0x206] = 0x00e0;
 chip8.memory[0xe8f] = 0x00e0;
+*/
 
 console.log("Memory Address" + " " + "Instruction\n");
 for (let i = 0; i < chip8.memory.length; i++)
