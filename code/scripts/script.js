@@ -318,6 +318,9 @@ class Chip8
 						   0xf0, 0x80, 0xf0, 0x80, 0xf0, // E
 						   0xf0, 0x80, 0xf0, 0x80, 0x80] // F
 		this.fontSpriteMemStart = 0x0;
+		// How many cycles the chip executes per second. So about 500Hz.
+		this.clockSpeed = 1 / 500;
+		this.lastTick = Date.now();
 	}
 
 	execute(cycles)
@@ -932,14 +935,38 @@ class Chip8
 										this.incrementPC(1);
 										if (this.dev)
 										{
-											console.log("  > Didn't skip the following instruction as key corresponding to value of V" + iVX.toString(16) + " is not pressed.\n");
-											console.log("  > Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+											console.log("  ! Didn't skip the following instruction as key corresponding to value of V" + iVX.toString(16) + " is not pressed.\n");
+											console.log("  ! Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
 										}
 									}
 								}
 								break;
 							case "A1": // Skip the following instruction if the key corresponding to the hex value corrently stored
 									   // in register VX is not pressed.
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX].toString(16), 16);
+
+									// If key is pressed.
+									if (key[parseInt(vVX)] == false)
+									{
+										this.incrementPC(2);
+										if (this.dev)
+										{
+											console.log("  > Skipped the following instruction as key corresponding to value of V" + iVX.toString(16) + " is not pressed.\n");
+											console.log("  > Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+									}
+									else
+									{
+										this.incrementPC(1);
+										if (this.dev)
+										{
+											console.log("  ! Didn't skip the following instruction as key corresponding to value of V" + iVX.toString(16) + " is pressed.\n");
+											console.log("  ! Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+									}
+								}
 								break;
 							default:
 								break;
@@ -1043,6 +1070,21 @@ class Chip8
 								}
 								break;
 							case "29": // Set I to the memory address of the sprite data corresponding to the hexadecimal digit stored in register VX
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+
+									// *5 as the font is 5 rows high.
+									this.I = this.fontSpriteMemStart + vVX*5;
+
+									this.incrementPC(1);
+									if (this.dev)
+									{
+										console.log("  > Set I to the memory address of the sprite data corresponding to the hexadecimal digit stored in register V" + iVX.toString(16) + ".\n");
+										console.log("  > Value of V" + iVX.toString(16) + " is 0x" + vVX.toString(16) + ".\n");
+										console.log("  > Value of I is 0x" + this.I.toString(16) + ".\n");
+									}
+								}
 								break;
 							case "33": // Store the binary-coded decimal equivalent of the value stored in register VX at addresses I, I+1 and I+2
 								{
@@ -1217,17 +1259,12 @@ chip8.DT = "0f";
 chip8.V[0] = 0x0;
 chip8.V[1] = 0x5;
 chip8.V[2] = 0xf; // key
-chip8.memory[0xff] = 0x00ee;
 chip8.I = 50;
-chip8.memory[0x200] = 0xD005; // Draw sprite at V0 V0
-chip8.memory[0x201] = 0xC040; // Random value for V0
-chip8.memory[0x202] = 0xC120; // Random value for V1
-chip8.memory[0x203] = 0xD015; // Draw sprite at V0 V1
 
-chip8.memory[0x200] = 0x00e0; // clear screen
+//chip8.dev = false;
 chip8.memory[0x200] = 0xD005; // draw sprite
-chip8.memory[0x201] = 0xF00A;
-chip8.memory[0x202] = 0xE29E; // skip next instruction on keypress
+chip8.memory[0x201] = 0xF229;
+chip8.memory[0x202] = 0xE2A1; // skip next instruction on !keypress
 chip8.memory[0x203] = 0x00e0; // clear screen
 chip8.memory[0x204] = 0xD115; // draw sprite
 chip8.memory[0x205] = 0x1200; // jump to address nnn
@@ -1259,15 +1296,14 @@ for (let i = 0; i < 5000; i++)
 {
 }
 
-chip8.execute(4);
-chip8.draw();
+//chip8.execute(5);
+//chip8.draw();
 
 // Time variables
 let tp1 = Date.now();
 let tp2 = Date.now();
 let elapsedTime = 0;
 
-/*
 // The game loop
 window.main = function ()
 {
@@ -1278,10 +1314,14 @@ window.main = function ()
     //console.log("elapsedTime:" + elapsedTime + "\n");
     tp1 = tp2;
 
-    ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-	chip8.execute(2);
+    //ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (tp1-chip8.lastTick >= chip8.clockSpeed)
+	{
+		chip8.execute(1);
+		chip8.draw();
+		chip8.lastTick = Date.now();
+	}
 }
 
 // Start the game loop
 main();
-*/
