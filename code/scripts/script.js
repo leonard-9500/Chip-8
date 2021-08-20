@@ -62,44 +62,88 @@ function mouseUpHandler(e)
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
-let wPressed = false,
-    aPressed = false,
-    sPressed = false,
-    dPressed = false,
-    jPressed = false,
-    kPressed = false,
-    lPressed = false;
-
-let wPressedBefore = false,
-    aPressedBefore = false,
-    sPressedBefore = false,
-    dPressedBefore = false,
-    jPressedBefore = false,
-    kPressedBefore = false,
-    lPressedBefore = false;
+// Index corresponds to key.
+let key = new Array(16);
+key.fill(false);
+let anyKeyPressed = false;
 
 function keyDownHandler(e)
 {
-    if (e.code == "KeyW") { wPressed = true; }
-    if (e.code == "KeyA") { aPressed = true; }
-    if (e.code == "KeyS") { sPressed = true; }
-    if (e.code == "KeyD") { dPressed = true; }
+	if (e.code == "Digit1") { key[0x1] = true; }
+    if (e.code == "Digit2") { key[0x2] = true; }
+    if (e.code == "Digit3") { key[0x3] = true; }
+    if (e.code == "Digit4") { key[0xc] = true; }
 
-    if (e.code == "KeyJ") { jPressed = true; }
-    if (e.code == "KeyK") { kPressed = true; }
-    if (e.code == "KeyL") { lPressed = true; }
+    if (e.code == "KeyQ") { key[0x4] = true; }
+    if (e.code == "KeyW") { key[0x5] = true; }
+    if (e.code == "KeyE") { key[0x6] = true; }
+    if (e.code == "KeyR") { key[0xd] = true; }
+
+    if (e.code == "KeyA") { key[0x7] = true; }
+    if (e.code == "KeyS") { key[0x8] = true; }
+    if (e.code == "KeyD") { key[0x9] = true; }
+	if (e.code == "KeyF") { key[0xe] = true; }
+
+	if (e.code == "KeyY") { key[0xa] = true; }
+	if (e.code == "KeyX") { key[0x0] = true; }
+	if (e.code == "KeyC") { key[0xb] = true; }
+	if (e.code == "KeyV") { key[0xf] = true; }
+
+	// If the sum is greater than 0, a key has been pressed.
+	let sum = 0;
+	for (let i = 0; i < key.length; i++)
+	{
+		sum += key[i];
+	}
+	if (sum)
+	{
+		anyKeyPressed = true;
+	}
+
+	/*
+	if (e.code == "Digit1") { onePressed = true; }
+    if (e.code == "Digit2") { twoPressed = true; }
+    if (e.code == "Digit3") { threePressed = true; }
+    if (e.code == "Digit4") { cPressed = true; }
+
+    if (e.code == "KeyQ") { fourPressed = true; }
+    if (e.code == "KeyW") { fivePressed = true; }
+    if (e.code == "KeyE") { sixPressed = true; }
+    if (e.code == "KeyR") { dPressed = true; }
+
+    if (e.code == "KeyA") { sevenPressed = true; }
+    if (e.code == "KeyS") { eightPressed = true; }
+    if (e.code == "KeyD") { ninePressed = true; }
+	if (e.code == "KeyF") { ePressed = true; }
+
+	if (e.code == "KeyY") { aPressed = true; }
+	if (e.code == "KeyX") { zeroPressed = true; }
+	if (e.code == "KeyC") { bPressed = true; }
+	if (e.code == "KeyV") { fPressed = true; }
+	*/
 }
 
 function keyUpHandler(e)
 {
-    if (e.code == "KeyW") { wPressed = false; }
-    if (e.code == "KeyA") { aPressed = false; }
-    if (e.code == "KeyS") { sPressed = false; }
-    if (e.code == "KeyD") { dPressed = false; }
+	if (e.code == "Digit1") { key[0x1] = false; }
+    if (e.code == "Digit2") { key[0x2] = false; }
+    if (e.code == "Digit3") { key[0x3] = false; }
+    if (e.code == "Digit4") { key[0xc] = false; }
 
-    if (e.code == "KeyJ") { jPressed = false; }
-    if (e.code == "KeyK") { kPressed = false; }
-    if (e.code == "KeyL") { lPressed = false; }
+    if (e.code == "KeyQ") { key[0x4] = false; }
+    if (e.code == "KeyW") { key[0x5] = false; }
+    if (e.code == "KeyE") { key[0x6] = false; }
+    if (e.code == "KeyR") { key[0xd] = false; }
+
+    if (e.code == "KeyA") { key[0x7] = false; }
+    if (e.code == "KeyS") { key[0x8] = false; }
+    if (e.code == "KeyD") { key[0x9] = false; }
+	if (e.code == "KeyF") { key[0xe] = false; }
+
+	if (e.code == "KeyY") { key[0xa] = false; }
+	if (e.code == "KeyX") { key[0x0] = false; }
+	if (e.code == "KeyC") { key[0xb] = false; }
+	if (e.code == "KeyV") { key[0xf] = false; }
 }
 
 /* Class Definitions */
@@ -347,7 +391,7 @@ class Chip8
 					case "1": // Jump to address NNN
 						// This turns the instruction slice into a hex number which gets converted automatically to decimal during assignment to this.PC
 						this.PC = parseInt(instruction.slice(1, 4), 16);
-						if (this.dev) { console.log("  > Jumped to address " + this.PC + ".\n"); };
+						if (this.dev) { console.log("  > Jumped to address 0x" + this.PC.toString(16) + ".\n"); };
 						break;
 					// 2NNN
 					case "2": // Execute subroutine starting at address NNN
@@ -816,7 +860,7 @@ class Chip8
 							{
 								let s = this.memory[this.I+y].toString(2);
 								s = s.padStart(8, "0");
-								console.log(s);
+								if (this.dev) { console.log(s); };
 								// Draw single row of sprite. Maximum of 8 pixels wide
 								for (let x = 0; x < 8; x++)
 								{
@@ -869,7 +913,30 @@ class Chip8
 							//  EX__
 							case "9E": // Skip the following instruction if the key corresponding to the hex value currently stored
 									   // in register VX is pressed.
-								if (this.dev) { console.log("Skip the following instruction if the key corresponding to the hex value currently stored...\n"); };
+								{
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX].toString(16), 16);
+
+									// If key is pressed.
+									if (key[parseInt(vVX)] == true)
+									{
+										this.incrementPC(2);
+										if (this.dev)
+										{
+											console.log("  > Skipped the following instruction as key corresponding to value of V" + iVX.toString(16) + " is pressed.\n");
+											console.log("  > Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+									}
+									else
+									{
+										this.incrementPC(1);
+										if (this.dev)
+										{
+											console.log("  > Didn't skip the following instruction as key corresponding to value of V" + iVX.toString(16) + " is not pressed.\n");
+											console.log("  > Value of V" + iVX.toString(16) + " is 0x" + this.V[iVX].toString(16) + ".\n");
+										}
+									}
+								}
 								break;
 							case "A1": // Skip the following instruction if the key corresponding to the hex value corrently stored
 									   // in register VX is not pressed.
@@ -900,6 +967,34 @@ class Chip8
 								}
 								break;
 							case "0A": // Wait for a keypress and store the result in register VX
+								{
+									while(!anyKeyPressed)
+									{
+									}
+									let iVX = parseInt(instruction.slice(1, 2), 16);
+									let vVX = parseInt(this.V[iVX]);
+									let keyFound = false;
+									for (let i = 0; i < key.length; i++)
+									{
+										if (key[i] == true)
+										{
+											this.V[iVX] = parseInt(i, 16);
+											keyFound = true;
+										}
+									}
+
+									if (this.dev)
+									{
+										if (keyFound)
+										{
+											console.log("  > Key " + parseInt(i, 16) + " pressed. Stored value in register V" + iVX.toString(16) + ".\n");
+										}
+										else
+										{
+											console.log("  > Key " + parseInt(i, 16) + " not valid.\n");
+										}
+									}
+								}
 								break;
 							case "15": // Set the delay timer to the value of register VX
 								{
@@ -1120,14 +1215,22 @@ chip8.reset();
 
 chip8.DT = "0f";
 chip8.V[0] = 0x0;
-chip8.V[1] = 0x0;
-chip8.V[4] = 0x0;
+chip8.V[1] = 0x5;
+chip8.V[2] = 0xf; // key
 chip8.memory[0xff] = 0x00ee;
 chip8.I = 50;
 chip8.memory[0x200] = 0xD005; // Draw sprite at V0 V0
 chip8.memory[0x201] = 0xC040; // Random value for V0
 chip8.memory[0x202] = 0xC120; // Random value for V1
 chip8.memory[0x203] = 0xD015; // Draw sprite at V0 V1
+
+chip8.memory[0x200] = 0x00e0; // clear screen
+chip8.memory[0x200] = 0xD005; // draw sprite
+chip8.memory[0x201] = 0xF00A;
+chip8.memory[0x202] = 0xE29E; // skip next instruction on keypress
+chip8.memory[0x203] = 0x00e0; // clear screen
+chip8.memory[0x204] = 0xD115; // draw sprite
+chip8.memory[0x205] = 0x1200; // jump to address nnn
 /*
 chip8.memory[0x202] = 0x2204; // Goto subroutine at 204
 chip8.memory[0x203] = 0x00e0;
@@ -1151,7 +1254,12 @@ for (let i = 0; i < chip8.memory.length; i++)
 }
 /* End Testing */
 
-chip8.execute(5);
+//chip8.dev = false;
+for (let i = 0; i < 5000; i++)
+{
+}
+
+chip8.execute(4);
 chip8.draw();
 
 // Time variables
